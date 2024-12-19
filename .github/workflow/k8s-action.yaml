@@ -1,0 +1,90 @@
+name: Pipelines for AKS project
+
+on: 
+  push
+
+env:
+   CONTAINER_REGISTRY: docker.io
+   IMAGE_NAME: tundeade/go-web-app
+
+jobs:
+  terraform-deploy:
+    runs-on: ubuntu-latest
+    steps: 
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.9.8
+
+    - name: Set up TFlint
+      uses: terraform-linters/setup-tflint@v4
+    
+    - name: Terraform Init
+      working-directory: terraform-manifest
+      run: terraform init
+
+    - name: TFLint check
+      working-directory: terraform-manifest
+      run: tflint |
+
+    - name: Terradform Validate
+      working-directory: terraform-manifest
+      run: terraform validate
+
+    - name: Terraform Apply
+      working-directory: terraform-manifest
+      run: terraform apply --auto-approve
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Docker Build
+      run: echo docker build -t $CONTAINER_REGISTRY/${{ vars.DOCKER_USERNAME }}/$IMAGE_NAME:latest
+
+    - name: Docker Login
+      run: echo docker login --username=${{ vars.DOCKER_USERNAME }} --password=${{ secrets.DOCKER_PASSWORD }}
+
+  deploy:
+    needs: docker-build
+    concurrency: 
+      group: dev-deployment
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+    - name: Docker Run
+      # timeout-minutes: 1
+      run: |
+        echo docker run -d -p 8080:80 $CONTAINER_REGISTRY/${{ vars.DOCKER_USERNAME }}/$IMAGE_NAME:latest
+        sleep 60s
+
+
+  Dev-Deploy:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+
+    - name: Replace Placeholder tokens
+      uses: cschleiden/replace-tokens@v1
+      with:
+        tokenPrefix: '_{_'
+        tokensSuffix: '_}_'
+        files: '["kubernetes-manifest/*.yaml"]'
+        env:
+          NAMESPACE: ${{ vars.NAMESPACE }}
+          REPLICAS: ${{ vars.REPLICAS }}
+          IMAGE: {{ vars.DOCKERHUB_USERNAME }}/tundeade/go-web-app
+
+    - name: check files
+      run: |
+        cat kubernetes-manifests/*.yaml
+
+    - name: Deploy to Dev ENV
+      run: |
+       kubectl apply -f /kubernetes-manifest 
+     
+
