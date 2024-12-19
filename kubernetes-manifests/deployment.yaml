@@ -1,19 +1,23 @@
 apiVersion : apps/v1
 kind: Deployment
 metadata:
-  name: app1nginxaks 
+  name: go-webapp
+  namespace: _{_NAMESPACE_}_
 spec:
-  replicas: 1
+  replicas: _{_REPLICAS_}_
   selector:
     matchLabels:
-      app: app1nginxaks
+      app: go-webapp
   template:
     metadata:
       labels:
-        app: app1nginxaks 
+        app: go-webapp 
     spec:
       containers:
-        - name: app1nginxaks 
-          image: aksdevopsacr.azurecr.io/app1nginxaks
+        - name: go-webapp
+          image: _{_IMAGE_}_
+          imagePulPolicy: Always
           ports:
-          - containerPort: 80
+          - containerPort: 3000
+            name: http
+            protocol: TCP

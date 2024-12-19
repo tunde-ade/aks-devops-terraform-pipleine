@@ -1,13 +1,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-    name: app1nginxaks
+    name: go-webapp
+    labels: go-webapp
+    namespace: _{_NAMESPACE_}_
 spec:
-    type: LoadBalancer
     ports:
-    - port: 80 
+    - port: 3000
+      protocol: TCP
+      targetPort: 3000
     selector:
-        app: app1nginxaks
+        app: go-webapp
+    type: NodePort
 
-
-az ad sp create-for-rbac --name aks_terraform_sp --role Contributor --scopes /subscriptions/7fb5df25-588e-486b-adc9-c36f5f78a293/resourceGroups/oba_rg
