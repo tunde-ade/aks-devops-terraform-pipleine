@@ -1,7 +1,9 @@
 name: Pipelines for AKS project
 
 on: 
-  push
+  push:
+    branches:
+      - master
 
 env:
    CONTAINER_REGISTRY: docker.io
